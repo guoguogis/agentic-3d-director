@@ -1,0 +1,248 @@
+[
+  {
+    "category": "便利生活",
+    "fileName": "shopping_cart.obj",
+    "name": "购物车",
+    "size": 0.88
+  },
+  {
+    "category": "便利生活",
+    "fileName": "shopping_basket.obj",
+    "name": "购物篮",
+    "size": 0.4
+  },
+  {
+    "category": "便利生活",
+    "fileName": "shelf.obj",
+    "name": "货架",
+    "size": 1.5
+  },
+  {
+    "category": "便利生活",
+    "fileName": "trash_can.obj",
+    "name": "垃圾桶",
+    "size": 0.695
+  },
+  {
+    "category": "便利生活",
+    "fileName": "soda_can.obj",
+    "name": "易拉罐",
+    "size": 0.128
+  },
+  {
+    "category": "便利生活",
+    "fileName": "soda_bottle.obj",
+    "name": "饮料瓶",
+    "size": 0.31
+  },
+  {
+    "category": "便利生活",
+    "fileName": "cardboard_box.obj",
+    "name": "纸箱",
+    "size": 0.43
+  },
+  {
+    "category": "便利生活",
+    "fileName": "vending_machine.obj",
+    "name": "自动售货机",
+    "size": 1.8
+  },
+  {
+    "category": "工具配件",
+    "fileName": "wrench.obj",
+    "name": "扳手",
+    "size": 0.515
+  },
+  {
+    "category": "工具配件",
+    "fileName": "hammer.obj",
+    "name": "锤子",
+    "size": 0.4
+  },
+  {
+    "category": "工具配件",
+    "fileName": "toolbox.obj",
+    "name": "工具箱",
+    "size": 0.52
+  },
+  {
+    "category": "工具配件",
+    "fileName": "workbench.obj",
+    "name": "工作台",
+    "size": 1.4
+  },
+  {
+    "category": "工具配件",
+    "fileName": "tape_measure.obj",
+    "name": "卷尺",
+    "size": 0.33
+  },
+  {
+    "category": "工具配件",
+    "fileName": "screwdriver.obj",
+    "name": "螺丝刀",
+    "size": 0.43
+  },
+  {
+    "category": "工具配件",
+    "fileName": "hand_saw.obj",
+    "name": "手锯",
+    "size": 0.723
+  },
+  {
+    "category": "工具配件",
+    "fileName": "bucket.obj",
+    "name": "水桶",
+    "size": 0.465
+  },
+  {
+    "category": "工具配件",
+    "fileName": "ladder.obj",
+    "name": "梯子",
+    "size": 1.8
+  },
+  {
+    "category": "户外出行",
+    "fileName": "bush.obj",
+    "name": "灌木",
+    "size": 1.02
+  },
+  {
+    "category": "户外出行",
+    "fileName": "street_light.obj",
+    "name": "路灯",
+    "size": 3.05
+  },
+  {
+    "category": "户外出行",
+    "fileName": "traffic_cone.obj",
+    "name": "路锥",
+    "size": 0.48
+  },
+  {
+    "category": "户外出行",
+    "fileName": "wooden_crate.obj",
+    "name": "木箱",
+    "size": 0.52
+  },
+  {
+    "category": "户外出行",
+    "fileName": "rock.obj",
+    "name": "石头",
+    "size": 1.013
+  },
+  {
+    "category": "户外出行",
+    "fileName": "tree.obj",
+    "name": "树",
+    "size": 2.47
+  },
+  {
+    "category": "户外出行",
+    "fileName": "fence.obj",
+    "name": "围栏",
+    "size": 1.9
+  },
+  {
+    "category": "户外出行",
+    "fileName": "fire_hydrant.obj",
+    "name": "消防栓",
+    "size": 0.66
+  },
+  {
+    "category": "户外出行",
+    "fileName": "mailbox.obj",
+    "name": "邮箱",
+    "size": 1.26
+  },
+  {
+    "category": "户外出行",
+    "fileName": "bench.obj",
+    "name": "长椅",
+    "size": 1.4
+  },
+  {
+    "category": "户外出行",
+    "fileName": "tent.obj",
+    "name": "帐篷",
+    "size": 1.81
+  },
+  {
+    "category": "户外出行",
+    "fileName": "bicycle.obj",
+    "name": "自行车",
+    "size": 1.23
+  },
+  {
+    "category": "生活家居",
+    "fileName": "fridge.obj",
+    "name": "冰箱",
+    "size": 1.8
+  },
+  {
+    "category": "生活家居",
+    "fileName": "dining_table.obj",
+    "name": "餐桌",
+    "size": 1.4
+  },
+  {
+    "category": "生活家居",
+    "fileName": "coffee_table.obj",
+    "name": "茶几",
+    "size": 1
+  },
+  {
+    "category": "生活家居",
+    "fileName": "bed.obj",
+    "name": "床",
+    "size": 2.05
+  },
+  {
+    "category": "生活家居",
+    "fileName": "nightstand.obj",
+    "name": "床头柜",
+    "size": 0.55
+  },
+  {
+    "category": "生活家居",
+    "fileName": "tv.obj",
+    "name": "电视",
+    "size": 1.2
+  },
+  {
+    "category": "生活家居",
+    "fileName": "floor_lamp.obj",
+    "name": "落地灯",
+    "size": 1.82
+  },
+  {
+    "category": "生活家居",
+    "fileName": "sofa.obj",
+    "name": "沙发",
+    "size": 1.8
+  },
+  {
+    "category": "生活家居",
+    "fileName": "bookshelf.obj",
+    "name": "书架",
+    "size": 1.94
+  },
+  {
+    "category": "生活家居",
+    "fileName": "wardrobe.obj",
+    "name": "衣柜",
+    "size": 2
+  },
+  {
+    "category": "生活家居",
+    "fileName": "chair.obj",
+    "name": "椅子",
+    "size": 0.98
+  },
+  {
+    "category": "生活家居",
+    "fileName": "stool.obj",
+    "name": "圆凳",
+    "size": 0.48
+  }
+]

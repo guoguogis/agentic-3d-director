@@ -30,6 +30,7 @@ import {
 import { useDirectorStore } from "../store/directorStore";
 import { getTimelinePlaybackEndTime, normalizeDirectorTimeline } from "./animationTimeline";
 import { downloadTimelineVideo, recordTimelineVideo } from "./timelineVideoExport";
+import { postDirectorDeskVideoToHost } from "../io/hostBridge";
 
 const MIN_PIXELS_PER_SECOND = 70;
 const MAX_PIXELS_PER_SECOND = 220;
@@ -211,8 +212,18 @@ export function AnimationTimelinePanel() {
         onFrame: (timeSec) => useDirectorStore.getState().setTimelineCurrentTime(timeSec),
         onProgress: setVideoExportProgress,
       });
-      downloadTimelineVideo(recording);
-      setVideoExportMessage(`视频已导出（${recording.extension.toUpperCase()}）`);
+      // 嵌在画布时直接回填成视频节点（参考视频），否则走原来的下载
+      const baseName = `director-reference-${Date.now()}`;
+      const sentToHost = postDirectorDeskVideoToHost({
+        blob: recording.blob,
+        fileName: `${baseName}.${recording.extension}`,
+      });
+      if (sentToHost) {
+        setVideoExportMessage("参考视频已发送到画布");
+      } else {
+        downloadTimelineVideo(recording);
+        setVideoExportMessage(`视频已导出（${recording.extension.toUpperCase()}）`);
+      }
     } catch (error) {
       setVideoExportMessage(error instanceof Error ? error.message : "视频导出失败");
     } finally {

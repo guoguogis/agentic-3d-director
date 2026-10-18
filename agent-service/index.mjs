@@ -81,6 +81,18 @@ async function startMcp() {
 }
 
 const httpIndex = process.argv.indexOf("--http");
+
+// 本机常驻小服务：把异步异常写进日志并继续运行，避免一次未处理的 Promise 让整个导演助手直接消失。
+// （MCP 模式下只写 stderr，不会污染 stdout 协议流。）
+process.on("unhandledRejection", (reason) => {
+  const detail = reason instanceof Error ? reason.stack ?? reason.message : String(reason);
+  process.stderr.write(`[StoryAI Director Agent] unhandledRejection: ${detail}\n`);
+});
+process.on("uncaughtException", (error) => {
+  const detail = error instanceof Error ? error.stack ?? error.message : String(error);
+  process.stderr.write(`[StoryAI Director Agent] uncaughtException: ${detail}\n`);
+});
+
 if (httpIndex >= 0) {
   const requestedPort = Number(process.argv[httpIndex + 1]);
   await startDirectorAgentHttpServer(Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : 4319);

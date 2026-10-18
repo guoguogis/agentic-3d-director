@@ -39,6 +39,24 @@ npm run dev
 CODEX_CLI_PATH=/absolute/path/to/codex npm run agent
 ```
 
+### 直连 AI API（不经过 Codex）
+
+项目根目录放一个 `.env` 即可让 Agent 服务自己调用 OpenAI 兼容接口，密钥只留在本机：
+
+```dotenv
+AI_MODE=api
+AI_BASE_URL=https://api.deepseek.com/v1
+AI_API_KEY=sk-xxxxxxxxxxxxxxxx
+AI_MODEL=deepseek-chat
+```
+
+- `AI_MODE=auto`（默认）：有 `AI_API_KEY` 就走 API，否则回落 `codex exec`；`api` / `codex` 可强制其中一条通路。
+- 兼容 `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL`；`.env` 不覆盖已有环境变量，改完需重启 `npm run agent`。
+- 结构化输出默认按 `json_schema → json_object → 纯文本` 降级（`AI_JSON_MODE` 可锁定），随后仍走 `safeDecision` 白名单过滤，模型无法越权调用工具。
+- DeepSeek 目前不支持 `response_format: json_schema`（会返回 400），服务会自动降级到 `json_object`；弱模型偶尔输出截断 JSON 时，会带修复提示自动重试一次，必要时再降级。
+- 查看当前生效配置：`curl http://127.0.0.1:4319/api/director-agent/ai-config`，密钥只返回掩码。
+- 这套配置只影响网页助手（`/chat` 通路）；MCP 客户端（如 Codex）自带模型，只是调用 4319 的语义工具。
+
 ## 在 Codex 中启用 MCP
 
 仓库已提供项目级 [`.codex/config.toml`](../.codex/config.toml)。Codex 只会在用户信任该项目时加载项目配置。启动 Agent 服务、打开导演台网页后，重启 Codex 或新建一个任务，再检查 MCP 工具列表。

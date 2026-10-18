@@ -404,6 +404,12 @@ export function ViewportToolbar({
       name: item.name,
       url: item.url,
     });
+    // 导入模型会统一归一化到 2m；库里的条目带真实尺寸，这里按比例还原
+    if (item.size) {
+      const state = useDirectorStore.getState();
+      const objectId = state.selectedObjectId;
+      if (objectId) state.updateUniformScale(objectId, item.size / 2);
+    }
     setModelLibraryOpen(false);
   }
 
@@ -811,6 +817,9 @@ export function ViewportToolbar({
                       )}
                     </span>
                     <span className="model-library-name">{item.name}</span>
+                    {item.size ? (
+                      <span className="model-library-size">{item.size.toFixed(2)} m</span>
+                    ) : null}
                   </button>
                 )
               ))}

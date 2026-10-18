@@ -132,6 +132,37 @@ function openHostSession(payload: HostSessionPayload) {
   hostConnectedPanorama = null;
 }
 
+/**
+ * 是否嵌在宿主页面里（画布）。独立打开时 parent === self，走下载。
+ */
+export function isEmbeddedInHost() {
+  return typeof window !== "undefined" && window.parent !== window;
+}
+
+/**
+ * 把录好的参考视频交给宿主。
+ *
+ * 直接 postMessage 一个 Blob：结构化克隆能带二进制，比转 base64 省一大截内存/时间
+ * （十几 MB 的录像转 base64 会变成近 20MB 的字符串）。
+ */
+export function postDirectorDeskVideoToHost(video: { blob: Blob; fileName: string }) {
+  if (!video?.blob || video.blob.size === 0) return false;
+  if (!isEmbeddedInHost()) return false;
+
+  window.parent?.postMessage(
+    {
+      type: "storyai:director-desk-video-sent",
+      payload: {
+        blob: video.blob,
+        fileName: video.fileName || "director-reference-video.mp4",
+        mimeType: video.blob.type || "video/mp4",
+      },
+    },
+    getHostOrigin()
+  );
+  return true;
+}
+
 export function postDirectorDeskCapturesToHost(
   captures: Array<{
     dataUrl: string;

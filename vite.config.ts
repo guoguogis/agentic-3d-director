@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import { configDefaults, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
@@ -11,8 +13,8 @@ export default defineConfig({
     },
     fs: {
       allow: [
-        decodeURIComponent(new URL(".", import.meta.url).pathname),
-        decodeURIComponent(new URL("../模型库", import.meta.url).pathname),
+        fileURLToPath(new URL(".", import.meta.url)),
+        fileURLToPath(new URL("../模型库", import.meta.url)),
       ],
     },
   },

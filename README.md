@@ -139,6 +139,40 @@ http://127.0.0.1:4173/
 
 导演台不会让 Agent 模拟点击界面，而是暴露带输入约束的语义工具；所有修改仍走现有 Store，因此手工操作、撤销、本地持久化和相机联动保持一致。
 
+## 直接配置 AI API（不依赖 Codex）
+
+网页导演助手默认调用本机 Codex CLI。你也可以把任意 **OpenAI 兼容接口** 直接配到项目里，由本机 Agent 服务自己发请求，不再需要 Codex：
+
+```bash
+cp .env.example .env
+# 编辑 .env，填入 AI_API_KEY / AI_BASE_URL / AI_MODEL
+npm run agent
+```
+
+`.env` 示例（DeepSeek）：
+
+```dotenv
+AI_MODE=api
+AI_BASE_URL=https://api.deepseek.com/v1
+AI_API_KEY=sk-xxxxxxxxxxxxxxxx
+AI_MODEL=deepseek-chat
+```
+
+| 变量 | 说明 | 默认 |
+| --- | --- | --- |
+| `AI_MODE` | `auto` / `api` / `codex`；`auto` 有 key 就直连 API，否则回落 Codex | `auto` |
+| `AI_BASE_URL` | 接口地址，需带版本前缀（OpenAI、DeepSeek、火山方舟 `/api/v3`、本地 Ollama 均可） | `https://api.openai.com/v1` |
+| `AI_API_KEY` | 密钥，仅保存在本机 `.env`（已 gitignore），不进入浏览器 | — |
+| `AI_MODEL` | 模型名，方舟填 Endpoint ID | `gpt-4o-mini` |
+| `AI_JSON_MODE` | 结构化输出策略：`auto` 会从 `json_schema` 降级到 `json_object` 再到纯文本 | `auto` |
+| `AI_TEMPERATURE` / `AI_MAX_TOKENS` / `AI_TIMEOUT_MS` | 可选采样与超时参数 | — / `4096` / `120000` |
+
+- 也兼容 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL` 这三个通用变量名；`.env` 不会覆盖已有的环境变量。
+- 启动时终端会打印当前生效的 AI（`AI: api · model=… · base=…`），也可访问 `GET /api/director-agent/ai-config` 查看（密钥只显示 `sk-***1234` 形式）。
+- 改完 `.env` 需要重启 `npm run agent`；浏览器侧无需任何配置，密钥不会进入前端。
+- 调用链仍是原来的：网页 → `/api/director-agent/chat` → AI 只产出受 schema 约束的 JSON 指令 → 白名单过滤 → 浏览器 Store 执行，因此乐观锁、人工锁定保护和撤销栈全部照旧。
+- 未配置 key 时行为与之前完全一致（走 `codex exec`），两条通路可随时通过 `AI_MODE` 切换。
+
 ## 构建与测试
 
 构建：

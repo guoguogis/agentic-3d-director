@@ -1,3 +1,5 @@
+import presetManifest from "./presets/manifest.json";
+
 export type ModelLibraryCategoryId = "convenience" | "home" | "outdoor" | "tools" | "my-models";
 
 export type ModelLibraryCategory = {
@@ -11,6 +13,8 @@ export type ModelLibraryItem = {
   fileName: string;
   id: string;
   name: string;
+  /** 真实最大尺寸（米）：预置模型导入后按此还原比例 */
+  size?: number;
   thumbUrl?: string;
   url: string;
 };
@@ -84,6 +88,44 @@ const toolsThumbnailModules = import.meta.glob(
     query: "?url",
   }
 ) as Record<string, string>;
+
+/** 内置白模：随源码分发的 OBJ + 等轴测 SVG 缩略图（scripts/generate-model-library.mjs 生成） */
+const presetModelModules = import.meta.glob("./presets/**/*.obj", {
+  eager: true,
+  import: "default",
+  query: "?url",
+}) as Record<string, string>;
+
+const presetThumbnailModules = import.meta.glob("./presets/**/*.svg", {
+  eager: true,
+  import: "default",
+  query: "?url",
+}) as Record<string, string>;
+
+type PresetManifestEntry = {
+  category: string;
+  fileName: string;
+  name: string;
+  size: number;
+};
+
+const PRESET_MANIFEST = presetManifest as PresetManifestEntry[];
+
+function moduleKey(path: string) {
+  const match = path.match(/\/presets\/([^/]+)\/([^/]+)$/);
+  return match ? `${match[1]}/${match[2]}` : "";
+}
+
+const presetModelUrls = new Map(
+  Object.entries(presetModelModules).map(([path, url]) => [moduleKey(path), url])
+);
+
+const presetThumbnailUrls = new Map(
+  Object.entries(presetThumbnailModules).map(([path, url]) => [
+    moduleKey(path).replace(/\.svg$/i, ""),
+    url,
+  ])
+);
 
 const MODEL_LIBRARY_NAME_MAP: Record<string, string> = {
   "2_liter_low.fbx": "两升饮料瓶",
@@ -315,7 +357,7 @@ export function getModelLibraryItems() {
     ["tools", createThumbnailsByName(toolsThumbnailModules)],
   ]);
 
-  return Object.entries(modelLibraryModules)
+  const externalItems = Object.entries(modelLibraryModules)
     .map(([path, url]) => {
       const [, directoryName, fileName] = path.match(/模型库\/([^/]+)\/([^/]+)$/) ?? [];
       const category = categoriesByDirectory.get(directoryName);
@@ -335,13 +377,37 @@ export function getModelLibraryItems() {
         ...(thumbUrl ? { thumbUrl } : {}),
       } satisfies ModelLibraryItem;
     })
-    .filter((item): item is ModelLibraryItem => item !== null)
-    .sort((a, b) => {
-      const categoryIndexA = MODEL_LIBRARY_CATEGORIES.findIndex((category) => category.id === a.categoryId);
-      const categoryIndexB = MODEL_LIBRARY_CATEGORIES.findIndex((category) => category.id === b.categoryId);
+    .filter((item): item is ModelLibraryItem => item !== null);
 
-      if (categoryIndexA !== categoryIndexB) return categoryIndexA - categoryIndexB;
+  const presetItems = PRESET_MANIFEST
+    .map((entry): ModelLibraryItem | null => {
+      const category = categoriesByDirectory.get(entry.category);
+      if (!category) return null;
 
-      return a.name.localeCompare(b.name);
-    });
+      const url = presetModelUrls.get(`${entry.category}/${entry.fileName}`);
+      if (!url) return null;
+      const thumbUrl = presetThumbnailUrls.get(
+        `${entry.category}/${entry.fileName.replace(/\.obj$/i, "")}`
+      );
+
+      return {
+        categoryId: category.id,
+        fileName: entry.fileName,
+        id: `${category.id}:preset:${entry.fileName}`,
+        name: entry.name,
+        size: entry.size,
+        url,
+        ...(thumbUrl ? { thumbUrl } : {}),
+      } satisfies ModelLibraryItem;
+    })
+    .filter((item): item is ModelLibraryItem => item !== null);
+
+  return [...externalItems, ...presetItems].sort((a, b) => {
+    const categoryIndexA = MODEL_LIBRARY_CATEGORIES.findIndex((category) => category.id === a.categoryId);
+    const categoryIndexB = MODEL_LIBRARY_CATEGORIES.findIndex((category) => category.id === b.categoryId);
+
+    if (categoryIndexA !== categoryIndexB) return categoryIndexA - categoryIndexB;
+
+    return a.name.localeCompare(b.name, "zh");
+  });
 }

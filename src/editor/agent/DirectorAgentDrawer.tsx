@@ -1,4 +1,4 @@
-import { ArrowUp, CircleAlert, GripHorizontal, LoaderCircle, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowUp, CircleAlert, GripHorizontal, ImagePlus, LoaderCircle, ShieldCheck, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { sendDirectorAgentMessage, type DirectorAgentMessage } from "./directorAgentApi";
 import {
@@ -8,6 +8,7 @@ import {
 } from "./directorAgentBrowserBridge";
 
 const SUGGESTIONS = [
+  "把这张图转成 3D 建模提示词（先点回形针上传图片）",
   "读取当前场景，概括人物、道具和机位布局",
   "新增一男一女两个角色，分别放在画面左右并让他们面向彼此",
   "给当前角色应用思考姿势，并把机位调整为中景构图",
@@ -29,6 +30,35 @@ type PanelDragState = {
   width: number;
   height: number;
 };
+
+/**
+ * 复制文本。navigator.clipboard 在无权限 / 非安全上下文 / 某些内嵌 webview 里会直接抛错，
+ * 这里回退到「临时 textarea + execCommand」，保证复制按钮始终可用。
+ */
+async function copyText(value: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // 落到下面的兜底
+  }
+  try {
+    const area = document.createElement("textarea");
+    area.value = value;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(area);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 function clamp(value: number, minimum: number, maximum: number) {
   if (maximum < minimum) return minimum;
@@ -52,8 +82,12 @@ export function DirectorAgentDrawer({
 }) {
   const [messages, setMessages] = useState<DirectorAgentMessage[]>([]);
   const [input, setInput] = useState("");
+  /** 待发送的图片（data URL）：给模型看参考图用，发完即清 */
+  const [attachments, setAttachments] = useState<Array<{ id: string; dataUrl: string; name: string }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copiedKey, setCopiedKey] = useState("");
   const [connectionStatus, setConnectionStatus] = useState(getDirectorAgentConnectionStatus());
   const [panelDragging, setPanelDragging] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
@@ -150,12 +184,56 @@ export function DirectorAgentDrawer({
     setPanelDragging(true);
   }
 
+  /** 读图：限制单文件 6MB、最多 4 张，避免请求体过大被上游拒 */
+  function addFiles(files: FileList | null) {
+    if (!files?.length) return;
+    const room = 4 - attachments.length;
+    if (room <= 0) {
+      setError("最多一次附 4 张图片");
+      return;
+    }
+    const picked = Array.from(files).slice(0, room);
+    for (const file of picked) {
+      if (!file.type.startsWith("image/")) {
+        setError("只能上传图片文件");
+        continue;
+      }
+      if (file.size > 6 * 1024 * 1024) {
+        setError(`图片「${file.name}」超过 6MB，请压缩后再传`);
+        continue;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result || "");
+        if (!dataUrl.startsWith("data:image/")) return;
+        setAttachments((current) => [...current, {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          dataUrl,
+          name: file.name || "图片",
+        }]);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   async function send(draft?: string) {
     const content = (draft ?? input).trim();
-    if (!content || loading) return;
-    const nextMessages = [...messages, { role: "user" as const, content }];
+    // 允许「只发图不写字」：模型能直接看图
+    if ((!content && attachments.length === 0) || loading) return;
+    const parts = [
+      ...(content ? [{ type: "text" as const, text: content }] : []),
+      ...attachments.map((item) => ({
+        type: "image_url" as const,
+        image_url: { url: item.dataUrl },
+      })),
+    ];
+    const nextMessages: DirectorAgentMessage[] = [
+      ...messages,
+      { role: "user", content: parts.length > 1 || !content ? parts : content },
+    ];
     setMessages(nextMessages);
     setInput("");
+    setAttachments([]);
     setLoading(true);
     setError("");
 
@@ -167,7 +245,12 @@ export function DirectorAgentDrawer({
         : "";
       setMessages((current) => [
         ...current,
-        { role: "assistant", content: `${result.message}${failureText}` },
+        {
+          role: "assistant",
+          content: `${result.message}${failureText}`,
+          // 建模提示词单独存一份，渲染成可复制的卡片
+          ...(result.modelingPrompt ? { modelingPrompt: result.modelingPrompt } : {}),
+        },
       ]);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -225,11 +308,53 @@ export function DirectorAgentDrawer({
             </div>
           </div>
         )}
-        {messages.map((message, index) => (
-          <div key={`${message.role}-${index}`} className={`director-agent-message is-${message.role}`}>
-            {message.content}
-          </div>
-        ))}
+        {messages.map((message, index) => {
+          const parts = typeof message.content === "string" ? null : message.content;
+          const text = parts
+            ? parts.filter((part) => part.type === "text").map((part) => (part as { text: string }).text).join(" ")
+            : (message.content as string);
+          const images = parts
+            ? parts.filter((part) => part.type === "image_url")
+              .map((part) => (part as { image_url: { url: string } }).image_url.url)
+            : [];
+          const modeling = message.modelingPrompt;
+          return (
+            <div key={`${message.role}-${index}`} className={`director-agent-message is-${message.role}`}>
+              {text}
+              {modeling && (
+                <div className="director-agent-modeling">
+                  <div className="director-agent-modeling-head">
+                    <span>建模提示词</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void copyText(modeling).then((ok) => {
+                          if (!ok) {
+                            setError("复制失败，请手动选择文本");
+                            return;
+                          }
+                          setCopiedKey(`${index}`);
+                          window.setTimeout(() => setCopiedKey(""), 1500);
+                        });
+                      }}
+                    >
+                      {copiedKey === `${index}` ? "已复制" : "复制"}
+                    </button>
+                  </div>
+                  <pre>{modeling}</pre>
+                </div>
+              )}
+              {images.length > 0 && (
+                <div className="director-agent-message-images">
+                  {images.map((url, imageIndex) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={index + "-" + imageIndex} src={url} alt={"附图 " + (imageIndex + 1)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {loading && (
           <div className="director-agent-thinking">
             <LoaderCircle aria-hidden="true" className="director-agent-spin" size={15} />
@@ -240,6 +365,33 @@ export function DirectorAgentDrawer({
       </div>
 
       <div className="director-agent-composer">
+        {attachments.length > 0 && (
+          <div className="director-agent-attachment-hint">
+            <button
+              type="button"
+              onClick={() => setInput("把这张图转成可直接用于图生 3D 的建模提示词，包含主体结构、材质、拓扑与面数建议、负向提示，并在最后给一行英文关键词。")}
+            >
+              转成建模提示词
+            </button>
+          </div>
+        )}
+        {attachments.length > 0 && (
+          <div className="director-agent-attachments">
+            {attachments.map((item) => (
+              <span key={item.id} className="director-agent-attachment">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={item.dataUrl} alt={item.name} />
+                <button
+                  type="button"
+                  aria-label={"移除 " + item.name}
+                  onClick={() => setAttachments((current) => current.filter((a) => a.id !== item.id))}
+                >
+                  <X aria-hidden="true" size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         <textarea
           ref={inputRef}
           value={input}
@@ -254,10 +406,32 @@ export function DirectorAgentDrawer({
         />
         <div className="director-agent-composer-footer">
           <span><ShieldCheck aria-hidden="true" size={13} />人工锁定默认受保护</span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            data-testid="director-agent-image-input"
+            onChange={(event) => {
+              addFiles(event.target.files);
+              event.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            className="director-agent-attach-button"
+            aria-label="上传参考图片"
+            title="上传参考图片给导演助手看"
+            disabled={loading || connectionStatus !== "connected"}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <ImagePlus aria-hidden="true" size={15} />
+          </button>
           <button
             type="button"
             aria-label="发送给导演助手"
-            disabled={!input.trim() || loading || connectionStatus !== "connected"}
+            disabled={(!input.trim() && attachments.length === 0) || loading || connectionStatus !== "connected"}
             onClick={() => void send()}
           >
             <ArrowUp aria-hidden="true" size={17} />

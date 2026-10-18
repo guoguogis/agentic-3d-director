@@ -311,6 +311,160 @@ textarea:focus-visible {
   background: transparent;
 }
 
+/* 导演助手：上传参考图（与 icon-button 同一套视觉，只多一个禁用态） */
+/* 注意：footer 里有一条 `.director-agent-composer-footer button`（白底圆形，给发送键用的），
+   会连累到这个上传按钮，所以这里用「footer + class」提高特异性盖过它 */
+.director-agent-composer-footer .director-agent-attach-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  padding: 0;
+  color: rgb(var(--text-muted-rgb));
+  background: transparent;
+  cursor: pointer;
+}
+
+.director-agent-composer-footer .director-agent-attach-button:hover:not(:disabled) {
+  color: rgb(var(--text-rgb));
+  background: rgb(var(--surface-hover-rgb) / 0.72);
+}
+
+.director-agent-composer-footer .director-agent-attach-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 待发送的附件缩略图 */
+.director-agent-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 8px;
+}
+
+.director-agent-attachment {
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--border-rgb) / 0.6);
+}
+
+.director-agent-attachment img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.director-agent-attachment button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+  cursor: pointer;
+}
+
+/* 对话里回显的图片 */
+/* 建模提示词卡片：等宽 + 可滚动，长提示词不撑爆气泡 */
+.director-agent-modeling {
+  margin-top: 8px;
+  border: 1px solid rgb(var(--border-rgb) / 0.6);
+  border-radius: 10px;
+  background: rgb(var(--overlay-rgb) / 0.35);
+  overflow: hidden;
+}
+
+.director-agent-modeling-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid rgb(var(--border-rgb) / 0.5);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: rgb(var(--text-muted-rgb));
+}
+
+.director-agent-modeling-head button {
+  border: 1px solid rgb(var(--border-rgb) / 0.7);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 10px;
+  color: rgb(var(--text-rgb));
+  background: transparent;
+  cursor: pointer;
+  width: auto;
+  height: auto;
+}
+
+.director-agent-modeling-head button:hover {
+  background: rgb(var(--surface-hover-rgb) / 0.72);
+}
+
+.director-agent-modeling pre {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  font-size: 10.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: rgb(var(--text-rgb));
+}
+
+/* 附图时的一键指令 */
+.director-agent-attachment-hint {
+  padding: 0 12px 6px;
+}
+
+.director-agent-attachment-hint button {
+  border: 1px dashed rgb(var(--border-rgb) / 0.8);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 10px;
+  color: rgb(var(--text-muted-rgb));
+  background: transparent;
+  cursor: pointer;
+  width: auto;
+  height: auto;
+}
+
+.director-agent-attachment-hint button:hover {
+  color: rgb(var(--text-rgb));
+  border-color: rgb(var(--text-muted-rgb));
+}
+
+.director-agent-message-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.director-agent-message-images img {
+  max-width: 180px;
+  max-height: 140px;
+  border-radius: 8px;
+  display: block;
+}
+
 .director-agent-icon-button:hover {
   color: rgb(var(--text-rgb));
   background: rgb(var(--surface-hover-rgb) / 0.72);
@@ -2847,6 +3001,14 @@ textarea:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.model-library-size {
+  display: block;
+  margin-top: -4px;
+  color: rgb(var(--text-dim-rgb) / 0.72);
+  font-size: 10px;
+  line-height: 13px;
 }
 
 .model-library-card-delete {

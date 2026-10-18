@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 
 import { runDirectorAgent } from "./agent.mjs";
+import { describeAiConfig } from "./aiConfig.mjs";
 import { BROWSER_COMMAND_NAMES, publicCapabilities } from "./toolDefinitions.mjs";
 
 const CLIENT_STALE_MS = 8_000;
@@ -226,6 +227,14 @@ class DirectorBrowserBroker {
   }
 }
 
+function aiStatus() {
+  try {
+    return describeAiConfig();
+  } catch (error) {
+    return { mode: "invalid", error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export function createDirectorAgentHttpServer({ onConnectionEvent } = {}) {
   const broker = new DirectorBrowserBroker(onConnectionEvent);
   const server = createServer(async (request, response) => {
@@ -243,7 +252,17 @@ export function createDirectorAgentHttpServer({ onConnectionEvent } = {}) {
 
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       if (request.method === "GET" && url.pathname === "/api/director-agent/health") {
-        json(response, 200, { ok: true, service: "storyai-director-agent", ...broker.status() }, origin);
+        const ai = aiStatus();
+        json(response, 200, {
+          ok: true,
+          service: "storyai-director-agent",
+          ...broker.status(),
+          ai: { mode: ai.mode, model: ai.model ?? null },
+        }, origin);
+        return;
+      }
+      if (request.method === "GET" && url.pathname === "/api/director-agent/ai-config") {
+        json(response, 200, { ok: true, result: aiStatus() }, origin);
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/director-agent/state") {
@@ -292,10 +311,35 @@ export function createDirectorAgentHttpServer({ onConnectionEvent } = {}) {
         if (!Array.isArray(payload.messages) || payload.messages.length === 0) throw new Error("对话消息不能为空");
         const messages = payload.messages.slice(-12).map((item) => {
           if (!item || typeof item !== "object") throw new Error("对话消息格式无效");
-          if ((item.role !== "user" && item.role !== "assistant") || typeof item.content !== "string") {
-            throw new Error("对话消息格式无效");
+          if (item.role !== "user" && item.role !== "assistant") throw new Error("对话消息格式无效");
+          // content 允许两种形态：纯文本，或 parts 数组（文本 + 图片）
+          if (typeof item.content === "string") {
+            return { role: item.role, content: item.content.slice(0, 6000) };
           }
-          return { role: item.role, content: item.content.slice(0, 6000) };
+          if (!Array.isArray(item.content)) throw new Error("对话消息格式无效");
+          const parts = [];
+          let imageCount = 0;
+          let textBudget = 6000;
+          for (const part of item.content) {
+            if (!part || typeof part !== "object") continue;
+            if (part.type === "text" && typeof part.text === "string") {
+              const text = part.text.slice(0, textBudget);
+              textBudget -= text.length;
+              parts.push({ type: "text", text });
+              continue;
+            }
+            if (part.type === "image_url") {
+              const url = part?.image_url?.url;
+              // 只收 data:image/* 或 http(s)；blob: 这类会随页面失效的地址直接丢
+              if (typeof url !== "string" || !/^(data:image\/|https?:\/\/)/.test(url)) continue;
+              if (url.length > 12_000_000) throw new Error("图片过大，请压缩到 6MB 以内");
+              if (imageCount >= 4) throw new Error("一次最多附 4 张图片");
+              imageCount += 1;
+              parts.push({ type: "image_url", image_url: { url } });
+            }
+          }
+          if (parts.length === 0) throw new Error("对话消息格式无效");
+          return { role: item.role, content: parts };
         });
         const result = await runDirectorAgent({
           messages,
@@ -331,5 +375,12 @@ export async function startDirectorAgentHttpServer(port = 4319) {
     server.listen(port, "127.0.0.1", resolve);
   });
   process.stderr.write(`StoryAI Director Agent service: http://127.0.0.1:${port}\n`);
+  const ai = aiStatus();
+  const detail = ai.mode === "api"
+    ? `api · model=${ai.model} · base=${ai.baseUrl} · key=${ai.apiKeyHint}`
+    : ai.mode === "invalid"
+      ? `配置无效：${ai.error}`
+      : "codex-cli（未配置 AI_API_KEY；在项目根目录 .env 里设置 AI_MODE=api 可直接调用 AI 接口）";
+  process.stderr.write(`StoryAI Director Agent AI: ${detail}\n`);
   return server;
 }

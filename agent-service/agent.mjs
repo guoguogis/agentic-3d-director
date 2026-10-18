@@ -3,7 +3,9 @@ import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { BROWSER_COMMAND_NAMES, publicCapabilities } from "./toolDefinitions.mjs";
+import { resolveAiConfig } from "./aiConfig.mjs";
+import { requestDirectorDecision } from "./aiProvider.mjs";
+import { buildDecisionSchema, buildDirectorPrompt, safeDecision } from "./decision.mjs";
 
 async function exists(path) {
   try {
@@ -56,60 +58,14 @@ function run(command, args, input, timeoutMs = 180_000) {
   });
 }
 
-function safeDecision(value) {
-  if (!value || typeof value !== "object") throw new Error("导演助手返回了无效结果");
-  const message = typeof value.message === "string" && value.message.trim() ? value.message.trim() : "已完成。";
-  const commands = Array.isArray(value.commands)
-    ? value.commands.flatMap((entry) => {
-        if (!entry || typeof entry !== "object" || typeof entry.name !== "string") return [];
-        if (!BROWSER_COMMAND_NAMES.has(entry.name)) return [];
-        try {
-          const argumentsValue = JSON.parse(entry.arguments_json || "{}");
-          if (!argumentsValue || typeof argumentsValue !== "object" || Array.isArray(argumentsValue)) return [];
-          return [{ name: entry.name, arguments: argumentsValue }];
-        } catch {
-          return [];
-        }
-      })
-    : [];
-  return { message, commands };
-}
-
-export async function runDirectorAgent({ messages, getState, execute }) {
+/** 回落到本机 Codex CLI：一次性、read-only、schema 约束，无工具权限。 */
+async function runCodexDecision(prompt) {
   const codex = await findCodex();
-  let state = getState();
-  if (!state) throw new Error("导演台尚未连接，请打开网页并等待“已连接当前导演工程”");
   const root = await mkdtemp(join(tmpdir(), "storyai-director-agent-"));
   const schemaPath = join(root, "response.schema.json");
   const outputPath = join(root, "response.json");
-  const allowedCommands = [...BROWSER_COMMAND_NAMES];
-  const schema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["message", "commands"],
-    properties: {
-      message: { type: "string" },
-      commands: {
-        type: "array",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["name", "arguments_json"],
-          properties: {
-            name: { type: "string", enum: allowedCommands },
-            arguments_json: { type: "string", description: "A JSON object encoded as a string" },
-          },
-        },
-      },
-    },
-  };
-  await writeFile(schemaPath, JSON.stringify(schema), "utf8");
-  const conversation = messages
-    .slice(-12)
-    .map((item) => `${item.role === "user" ? "用户" : "导演助手"}：${item.content}`)
-    .join("\n");
-  const prompt = `你是 StoryAI 3D 导演台内的专业导演助手。你只输出符合 schema 的 JSON。\n\n工作规则：\n1. 必须根据当前工程状态里的精确 ID 操作，绝不编造对象。\n2. 用户需求明确时输出可执行 commands；含糊或缺少破坏性操作授权时先提一个简洁问题，commands 留空。\n3. 位置/缩放使用 {x,y,z} 米制对象，旋转使用 rotation_deg 的角度对象。\n4. locked=true 是人工决定，除非用户明确要求覆盖，否则绝不设置 override_locked。\n5. 只使用能力清单中已有字段，不操作 DOM，不重置工程，不导出图片。\n6. 多步操作按依赖顺序输出；服务会自动为每一步附加最新 expected_revision。\n7. 完成多步写操作后追加 director_validate。\n8. 回答用简洁中文，说明实际执行或需要澄清的内容。\n\n能力清单：\n${JSON.stringify(publicCapabilities())}\n\n当前完整工程状态：\n${JSON.stringify(state)}\n\n最近对话：\n${conversation}`;
 
+  await writeFile(schemaPath, JSON.stringify(buildDecisionSchema()), "utf8");
   try {
     await run(
       codex,
@@ -129,31 +85,55 @@ export async function runDirectorAgent({ messages, getState, execute }) {
         outputPath,
         "-",
       ],
-      prompt,
+      prompt.combined,
     );
-    const decision = safeDecision(JSON.parse(await readFile(outputPath, "utf8")));
-    const commandResults = [];
-
-    for (const command of decision.commands) {
-      try {
-        const argumentsValue = {
-          ...command.arguments,
-          ...(command.name === "director_validate" ? {} : { expected_revision: state.revision }),
-        };
-        state = await execute(command.name, argumentsValue);
-        commandResults.push({ name: command.name, ok: true });
-      } catch (error) {
-        commandResults.push({
-          name: command.name,
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        break;
-      }
+    return JSON.parse(await readFile(outputPath, "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error(
+        "未找到 codex CLI。可以在项目根目录 .env 里配置 AI_API_KEY 直接调用 AI 接口，或用 CODEX_CLI_PATH 指定 Codex 可执行文件。",
+      );
     }
-
-    return { message: decision.message, commands: commandResults, state };
+    throw error;
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+}
+
+export async function runDirectorAgent({ messages, getState, execute }) {
+  let state = getState();
+  if (!state) throw new Error("导演台尚未连接，请打开网页并等待“已连接当前导演工程”");
+
+  const prompt = buildDirectorPrompt({ state, messages });
+  const config = resolveAiConfig();
+  const decision = config.mode === "api"
+    ? await requestDirectorDecision({ config, prompt })
+    : safeDecision(await runCodexDecision(prompt));
+
+  const commandResults = [];
+  for (const command of decision.commands) {
+    try {
+      const argumentsValue = {
+        ...command.arguments,
+        ...(command.name === "director_validate" ? {} : { expected_revision: state.revision }),
+      };
+      state = await execute(command.name, argumentsValue);
+      commandResults.push({ name: command.name, ok: true });
+    } catch (error) {
+      commandResults.push({
+        name: command.name,
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      break;
+    }
+  }
+
+  return {
+    message: decision.message,
+    commands: commandResults,
+    // 只有「看图产出建模提示词」这类请求才有值
+    modelingPrompt: decision.modelingPrompt || "",
+    state,
+  };
 }
