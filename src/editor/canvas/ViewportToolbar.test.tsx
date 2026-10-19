@@ -59,6 +59,7 @@ it("renders the viewport capsule as project icon-system buttons", () => {
     "导入全景图",
     "导入本地模型",
     "模型库",
+    "模板",
     "添加机位",
     "选择画幅比例",
     "当前视角截图",
@@ -81,6 +82,24 @@ it("renders the viewport capsule as project icon-system buttons", () => {
     button.getAttribute("aria-label")
   );
   expect(toolbarButtonLabels.indexOf("模型库")).toBe(toolbarButtonLabels.indexOf("导入本地模型") + 1);
+});
+
+it("opens the scene template gallery and applies a template", async () => {
+  render(<ViewportToolbar />);
+
+  fireEvent.click(screen.getByRole("button", { name: "模板" }));
+  const dialog = screen.getByRole("dialog", { name: "场景模板" });
+  expect(within(dialog).getByText("卧室 · 四人调度")).toBeInTheDocument();
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "选择模板 卧室 · 四人调度" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "套用模板" }));
+
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog", { name: "场景模板" })).not.toBeInTheDocument();
+  });
+  expect(
+    useDirectorStore.getState().project.objects.filter((object) => object.kind === "character")
+  ).toHaveLength(4);
 });
 
 it("toggles the animation timeline from the viewport toolbar", async () => {

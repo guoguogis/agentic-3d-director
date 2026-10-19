@@ -4,6 +4,7 @@ import { Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState, type
 import { Box3, Matrix4, Quaternion, Vector3, type Group, type Object3D } from "three";
 import type { TransformControls as TransformControlsImpl } from "three-stdlib";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import type {
   DirectorAssetRef,
@@ -375,6 +376,13 @@ function ObjModel({ url }: { url: string }) {
   return <NormalizedImportedObject object={object} />;
 }
 
+function GltfModel({ url }: { url: string }) {
+  // 内置模型库可以带 GLB：与本地导入的 FBX / OBJ 一样按包围盒归一化
+  const gltf = useLoader(GLTFLoader, url);
+
+  return <NormalizedImportedObject object={gltf.scene} />;
+}
+
 function ImportedModel({
   fileName,
   url,
@@ -384,6 +392,7 @@ function ImportedModel({
 }) {
   if (/\.fbx$/i.test(fileName)) return <FbxModel url={url} />;
   if (/\.obj$/i.test(fileName)) return <ObjModel url={url} />;
+  if (/\.glb$/i.test(fileName)) return <GltfModel url={url} />;
   return null;
 }
 

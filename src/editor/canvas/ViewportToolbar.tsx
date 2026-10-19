@@ -18,6 +18,7 @@ import {
   Grid3X3,
   Image,
   ImagePlus,
+  LayoutTemplate,
   Move3D,
   Plus,
   Ratio,
@@ -50,6 +51,7 @@ import {
   type CrowdCharactersInput,
   type TransformMode,
 } from "../store/directorStore";
+import { DirectorTemplatePanel } from "../templates/DirectorTemplatePanel";
 
 type ToolbarAction = {
   label: string;
@@ -109,6 +111,7 @@ export function ViewportToolbar({
   const [geometryMenuOpen, setGeometryMenuOpen] = useState(false);
   const [crowdPanelOpen, setCrowdPanelOpen] = useState(false);
   const [modelLibraryOpen, setModelLibraryOpen] = useState(false);
+  const [templatePanelOpen, setTemplatePanelOpen] = useState(false);
   const [aspectRatioPanelOpen, setAspectRatioPanelOpen] = useState(false);
   const [toolbarHeight, setToolbarHeight] = useState(DEFAULT_VIEWPORT_TOOLBAR_HEIGHT);
   const [characterMenuStyle, setCharacterMenuStyle] = useState<CSSProperties>({});
@@ -390,6 +393,16 @@ export function ViewportToolbar({
 
   function toggleModelLibrary() {
     setModelLibraryOpen((isOpen) => !isOpen);
+    setTemplatePanelOpen(false);
+    setCharacterMenuOpen(false);
+    setGeometryMenuOpen(false);
+    setCrowdPanelOpen(false);
+    setAspectRatioPanelOpen(false);
+  }
+
+  function toggleTemplatePanel() {
+    setTemplatePanelOpen((isOpen) => !isOpen);
+    setModelLibraryOpen(false);
     setCharacterMenuOpen(false);
     setGeometryMenuOpen(false);
     setCrowdPanelOpen(false);
@@ -462,6 +475,7 @@ export function ViewportToolbar({
       },
     },
     { label: "模型库", icon: Boxes, onClick: toggleModelLibrary },
+    { label: "模板", icon: LayoutTemplate, active: templatePanelOpen, onClick: toggleTemplatePanel },
     { label: "添加机位", icon: Video, onClick: addCameraFromViewport },
     { label: "选择画幅比例", icon: Ratio, onClick: toggleAspectRatioPanel },
     { label: "当前视角截图", icon: Camera, onClick: () => void handleCapture("current") },
@@ -869,6 +883,9 @@ export function ViewportToolbar({
             })}
           </div>
         </div>
+      ) : null}
+      {templatePanelOpen ? (
+        <DirectorTemplatePanel onClose={() => setTemplatePanelOpen(false)} />
       ) : null}
       <input
         ref={panoramaInputRef}

@@ -1,6 +1,13 @@
 import presetManifest from "./presets/manifest.json";
+import directorDeskManifest from "./presets/manifest.director-desk.json";
 
-export type ModelLibraryCategoryId = "convenience" | "home" | "outdoor" | "tools" | "my-models";
+export type ModelLibraryCategoryId =
+  | "convenience"
+  | "home"
+  | "outdoor"
+  | "tools"
+  | "director-desk"
+  | "my-models";
 
 export type ModelLibraryCategory = {
   directoryName: string;
@@ -24,6 +31,7 @@ export const MODEL_LIBRARY_CATEGORIES: ModelLibraryCategory[] = [
   { id: "home", label: "居家生活", directoryName: "生活家居" },
   { id: "outdoor", label: "户外出行", directoryName: "户外出行" },
   { id: "tools", label: "工具配件", directoryName: "工具配件" },
+  { id: "director-desk", label: "导演台预置", directoryName: "导演台预置" },
   { id: "my-models", label: "我的模型", directoryName: "" },
 ];
 
@@ -89,8 +97,8 @@ const toolsThumbnailModules = import.meta.glob(
   }
 ) as Record<string, string>;
 
-/** 内置白模：随源码分发的 OBJ + 等轴测 SVG 缩略图（scripts/generate-model-library.mjs 生成） */
-const presetModelModules = import.meta.glob("./presets/**/*.obj", {
+/** 内置白模：随源码分发的 OBJ/GLB + 等轴测 SVG 缩略图 */
+const presetModelModules = import.meta.glob("./presets/**/*.{obj,glb}", {
   eager: true,
   import: "default",
   query: "?url",
@@ -109,7 +117,10 @@ type PresetManifestEntry = {
   size: number;
 };
 
-const PRESET_MANIFEST = presetManifest as PresetManifestEntry[];
+const PRESET_MANIFEST = [
+  ...(presetManifest as PresetManifestEntry[]),
+  ...(directorDeskManifest as PresetManifestEntry[]),
+];
 
 function moduleKey(path: string) {
   const match = path.match(/\/presets\/([^/]+)\/([^/]+)$/);
@@ -387,7 +398,7 @@ export function getModelLibraryItems() {
       const url = presetModelUrls.get(`${entry.category}/${entry.fileName}`);
       if (!url) return null;
       const thumbUrl = presetThumbnailUrls.get(
-        `${entry.category}/${entry.fileName.replace(/\.obj$/i, "")}`
+        `${entry.category}/${entry.fileName.replace(/\.(obj|glb)$/i, "")}`
       );
 
       return {

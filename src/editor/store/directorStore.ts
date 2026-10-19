@@ -203,7 +203,7 @@ type DirectorRuntimeState = DirectorState & DirectorInternalState;
 
 export type DirectorStore = DirectorRuntimeState & DirectorActions;
 
-const DEFAULT_SCENE: SceneSettings = {
+export const DEFAULT_SCENE: SceneSettings = {
   scale: 1,
   position: [0, 0, 0],
   rotation: [0, 0, 0],

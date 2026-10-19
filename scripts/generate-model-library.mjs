@@ -435,7 +435,11 @@ add('工具配件', 'tape_measure', '卷尺', [
 
 // ---------- 输出 ----------
 
-rmSync(outRoot, { recursive: true, force: true })
+// 只清理自己负责的四个分类；导演台预置（manifest.director-desk.json）由 director-desk 的导出脚本维护
+for (const category of ['便利生活', '生活家居', '户外出行', '工具配件']) {
+  rmSync(join(outRoot, category), { recursive: true, force: true })
+}
+mkdirSync(outRoot, { recursive: true })
 
 function bounds(geometry) {
   const min = [Infinity, Infinity, Infinity]
@@ -464,7 +468,8 @@ function svgText(geometry) {
   const span = Math.max(maxX - minX, maxY - minY) || 1
   const scale = 76 / span
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2
-  const toSvg = (p) => [(p[0] - cx) * scale + 48, -(p[1] - cy) * scale + 48]
+  // 投影结果已与 SVG 的 y 轴同向（世界坐标越高，投影 y 越小），再取反会导致缩略图上下颠倒
+  const toSvg = (p) => [(p[0] - cx) * scale + 48, (p[1] - cy) * scale + 48]
 
   const light = [0.45, 0.82, 0.35]
   const length = Math.hypot(...light)

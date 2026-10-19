@@ -1,0 +1,362 @@
+[
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-chair.glb",
+    "name": "餐椅",
+    "size": 0.9
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-stool.glb",
+    "name": "凳子",
+    "size": 0.44
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-bench.glb",
+    "name": "长凳",
+    "size": 1.6
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-armchair.glb",
+    "name": "扶手椅",
+    "size": 0.93
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-sofa-single.glb",
+    "name": "单人沙发",
+    "size": 0.92
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-sofa.glb",
+    "name": "多人沙发",
+    "size": 2.2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-table.glb",
+    "name": "方桌",
+    "size": 1.4
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-roundtable.glb",
+    "name": "圆桌",
+    "size": 1.2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-desk.glb",
+    "name": "书桌",
+    "size": 1.3
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-coffeetable.glb",
+    "name": "茶几",
+    "size": 1.05
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-wardrobe.glb",
+    "name": "衣柜 · 可开门",
+    "size": 2.1
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-bookshelf.glb",
+    "name": "书架",
+    "size": 1.9
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-bed-double.glb",
+    "name": "双人床 · 可调尺寸",
+    "size": 2.1
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-bunk.glb",
+    "name": "上下铺",
+    "size": 2.1
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-nightstand.glb",
+    "name": "床头柜 · 抽屉轮廓",
+    "size": 0.55
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-fridge.glb",
+    "name": "冰箱",
+    "size": 1.8
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-washer.glb",
+    "name": "洗衣机",
+    "size": 0.87
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "furniture-vending.glb",
+    "name": "自动售货机",
+    "size": 1.85
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "structure-wall.glb",
+    "name": "墙 · 可留洞",
+    "size": 4
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "structure-door.glb",
+    "name": "门 · 带框开合",
+    "size": 2.2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "structure-window.glb",
+    "name": "窗 · 可开窗扇",
+    "size": 1.5
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "structure-column.glb",
+    "name": "立柱",
+    "size": 3
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "structure-stairs-straight.glb",
+    "name": "直楼梯",
+    "size": 2.24
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "structure-railing.glb",
+    "name": "栏杆",
+    "size": 3
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "building-house.glb",
+    "name": "两层住宅",
+    "size": 7.3
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "building-shop.glb",
+    "name": "商铺",
+    "size": 6.2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "building-warehouse.glb",
+    "name": "仓库",
+    "size": 12.3
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "building-pavilion.glb",
+    "name": "亭子",
+    "size": 4.4
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "building-bungalow.glb",
+    "name": "平房",
+    "size": 6.3
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "road-straight.glb",
+    "name": "直路",
+    "size": 10
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "road-curve.glb",
+    "name": "弯路",
+    "size": 11
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "road-bridge.glb",
+    "name": "桥面 · 带护栏",
+    "size": 10
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "road-busstop.glb",
+    "name": "公交站亭",
+    "size": 4
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "industrial-cone.glb",
+    "name": "路锥",
+    "size": 0.7
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "plant-broadleaf.glb",
+    "name": "阔叶树",
+    "size": 5
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "plant-conifer.glb",
+    "name": "针叶树",
+    "size": 6
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "plant-palm.glb",
+    "name": "棕榈树",
+    "size": 6
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "plant-dead.glb",
+    "name": "枯树",
+    "size": 4.526
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "plant-bush.glb",
+    "name": "灌木",
+    "size": 1.4
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "plant-hedge.glb",
+    "name": "树篱",
+    "size": 4
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "terrain-rock.glb",
+    "name": "岩石 · 种子外形",
+    "size": 2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "terrain-hill.glb",
+    "name": "丘陵块",
+    "size": 8
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "industrial-container.glb",
+    "name": "集装箱",
+    "size": 6.06
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "industrial-pallet.glb",
+    "name": "托盘",
+    "size": 1.2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "industrial-barrel.glb",
+    "name": "油桶",
+    "size": 0.9
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "industrial-scaffold.glb",
+    "name": "脚手架",
+    "size": 6
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "industrial-handcart.glb",
+    "name": "手推车",
+    "size": 1.2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "theme-throne.glb",
+    "name": "宝座",
+    "size": 1.8
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "theme-table.glb",
+    "name": "古式长案",
+    "size": 2
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "theme-weaponrack.glb",
+    "name": "兵器架",
+    "size": 1.8
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "theme-flagpole.glb",
+    "name": "旗杆",
+    "size": 4
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "vehicle-sedan.glb",
+    "name": "轿车",
+    "size": 4.5
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "vehicle-bus.glb",
+    "name": "公交车",
+    "size": 10
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "vehicle-truck.glb",
+    "name": "卡车",
+    "size": 7
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "vehicle-bicycle.glb",
+    "name": "自行车",
+    "size": 1.8
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "vehicle-motorcycle.glb",
+    "name": "摩托车",
+    "size": 2.1
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "prop-bowl.glb",
+    "name": "碗",
+    "size": 0.18
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "prop-bottle.glb",
+    "name": "瓶子",
+    "size": 0.28
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "prop-suitcase.glb",
+    "name": "行李箱",
+    "size": 0.6
+  },
+  {
+    "category": "导演台预置",
+    "fileName": "prop-backpack.glb",
+    "name": "背包",
+    "size": 0.48
+  }
+]
