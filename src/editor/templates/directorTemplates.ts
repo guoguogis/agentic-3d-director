@@ -11,7 +11,11 @@ import type {
   GeometryPrimitiveType,
   SceneSettings,
 } from "../schema/directorProject";
-import { createDefaultDirectorTimeline } from "../timeline/animationTimeline";
+import {
+  createDefaultDirectorTimeline,
+  createTrajectoryTrack,
+  type DirectorTrajectoryWaypoint,
+} from "../timeline/animationTimeline";
 import { DEFAULT_SCENE } from "../store/directorStore";
 
 export type DirectorTemplateCategory = "室内" | "室外" | "特色" | "抽象" | "自由搭建";
@@ -73,7 +77,35 @@ interface LibraryObjectOptions {
   scale?: number;
 }
 
-function createProjectBuilder(scenePatch: Partial<SceneSettings> = {}) {
+/**
+ * 模板自带的演示动画：套用后时间轴里直接有轨道，可以播放并导出视频。
+ * 预置模板本身只读 —— 每次 build 都重新创建对象与轨道，改场景不会污染模板。
+ */
+interface TemplateAnimationOptions {
+  durationSec?: number
+  /** 机位运动：推近 / 环绕 / 不动 */
+  camera?: "push-in" | "orbit" | "none"
+  /** 角色运动：行走 / 奔跑 / 不动 */
+  characterMotion?: "walk" | "run" | "none"
+  /** 带运动的角色数量（从模板里前几个角色开始） */
+  characterCount?: number
+  /** 角色移动方向轴 */
+  characterAxis?: "x" | "z"
+}
+
+const DEFAULT_TEMPLATE_ANIMATION: Required<TemplateAnimationOptions> = {
+  durationSec: 8,
+  camera: "push-in",
+  characterMotion: "none",
+  characterCount: 0,
+  characterAxis: "x",
+}
+
+function createProjectBuilder(
+  scenePatch: Partial<SceneSettings> = {},
+  animationPatch: TemplateAnimationOptions = {},
+) {
+  const animation = { ...DEFAULT_TEMPLATE_ANIMATION, ...animationPatch };
   const project: DirectorProject = {
     version: 1,
     scene: { ...DEFAULT_SCENE, ...scenePatch },
@@ -86,6 +118,8 @@ function createProjectBuilder(scenePatch: Partial<SceneSettings> = {}) {
   };
 
   const nextObjectId = () => `obj_${project.objects.length + 1}`;
+  const cameraObjectIds: string[] = [];
+  const characterObjectIds: string[] = [];
 
   function addLibraryObject(options: LibraryObjectOptions) {
     const item = findLibraryItem(options.categoryId, options.fileName);
@@ -146,8 +180,10 @@ function createProjectBuilder(scenePatch: Partial<SceneSettings> = {}) {
     color?: string;
   }) {
     const color = options.color ?? CHARACTER_COLORS[project.objects.filter((item) => item.kind === "character").length % CHARACTER_COLORS.length];
+    const objectId = nextObjectId();
+    characterObjectIds.push(objectId);
     project.objects.push({
-      id: nextObjectId(),
+      id: objectId,
       name: options.name,
       kind: "character",
       visible: true,
@@ -183,8 +219,10 @@ function createProjectBuilder(scenePatch: Partial<SceneSettings> = {}) {
       captures: [],
     };
     project.cameras.push(camera);
+    const cameraObjectId = `cam_object_${project.cameras.length}`;
+    cameraObjectIds.push(cameraObjectId);
     project.objects.push({
-      id: `cam_object_${project.cameras.length}`,
+      id: cameraObjectId,
       name: options.name,
       kind: "camera",
       visible: true,
@@ -195,14 +233,141 @@ function createProjectBuilder(scenePatch: Partial<SceneSettings> = {}) {
     if (!project.activeCameraId) project.activeCameraId = cameraId;
   }
 
-  return { project, addLibraryObject, addPrimitive, addCharacter, addCamera };
+  /** 机位轨道：推近或环绕，保证套用模板后时间轴不是空的 */
+  function buildCameraTrack(): DirectorTrajectoryWaypoint[] {
+    const object = project.objects.find((item) => item.id === cameraObjectIds[0]);
+    const camera = project.cameras.find((item) => item.id === object?.linkedCameraId) ?? project.cameras[0];
+    if (!object || !camera) return [];
+    const start = [...camera.transform.position] as Vec3;
+    const target = [...camera.target] as Vec3;
+    const duration = animation.durationSec;
+
+    if (animation.camera === "orbit") {
+      const offsetX = start[0] - target[0];
+      const offsetZ = start[2] - target[2];
+      const radius = Math.max(1, Math.hypot(offsetX, offsetZ));
+      const startAngle = Math.atan2(offsetZ, offsetX);
+      const segments = 12;
+      const sweep = Math.PI * 0.55;
+      const waypoints: DirectorTrajectoryWaypoint[] = Array.from({ length: segments + 1 }, (_, index) => {
+        const progress = index / segments;
+        const angle = startAngle + sweep * progress;
+        return {
+          timeSec: Number((duration * progress).toFixed(3)),
+          position: [
+            target[0] + Math.cos(angle) * radius,
+            start[1],
+            target[2] + Math.sin(angle) * radius,
+          ] as Vec3,
+          target,
+          fov: camera.fov,
+          interpolation: "smooth" as const,
+        };
+      });
+      project.timeline!.tracks.push(createTrajectoryTrack({
+        object,
+        camera,
+        durationSec: duration,
+        preset: "custom",
+        waypoints,
+        orientToPath: false,
+        motion: "none",
+        source: "preset",
+        color: "#a9d8ff",
+      }));
+      return waypoints;
+    }
+
+    const deltaX = target[0] - start[0];
+    const deltaZ = target[2] - start[2];
+    const distance = Math.hypot(deltaX, deltaZ) || 1;
+    const travel = Math.min(2.4, Math.max(0.8, distance * 0.22));
+    const waypoints: DirectorTrajectoryWaypoint[] = [
+      {
+        timeSec: 0,
+        position: start,
+        target,
+        fov: camera.fov,
+        interpolation: "smooth",
+      },
+      {
+        timeSec: duration,
+        position: [
+          start[0] + (deltaX / distance) * travel,
+          start[1],
+          start[2] + (deltaZ / distance) * travel,
+        ] as Vec3,
+        target,
+        fov: camera.fov,
+        interpolation: "smooth",
+      },
+    ];
+    project.timeline!.tracks.push(createTrajectoryTrack({
+      object,
+      camera,
+      durationSec: duration,
+      preset: "custom",
+      waypoints,
+      orientToPath: false,
+      motion: "none",
+      source: "preset",
+      color: "#a9d8ff",
+    }));
+    return waypoints;
+  }
+
+  /** 角色轨道：沿指定轴走 / 跑，带动画时间轴里的骨骼动作 */
+  function buildCharacterTracks() {
+    if (animation.characterMotion === "none" || animation.characterCount <= 0) return;
+    const duration = animation.durationSec;
+    characterObjectIds.slice(0, animation.characterCount).forEach((objectId, index) => {
+      const object = project.objects.find((item) => item.id === objectId);
+      if (!object) return;
+      const start = [...object.transform.position] as Vec3;
+      const direction = index % 2 === 0 ? 1 : -1;
+      const travel = animation.characterMotion === "run" ? 3.2 : 1.5;
+      const end: Vec3 = animation.characterAxis === "z"
+        ? [start[0], start[1], start[2] + travel * direction]
+        : [start[0] + travel * direction, start[1], start[2]];
+      const delay = Math.min(duration * 0.35, index * 0.25);
+      const waypoints: DirectorTrajectoryWaypoint[] = [
+        { timeSec: 0, position: start, interpolation: "smooth" },
+        { timeSec: Number(delay.toFixed(3)), position: start, interpolation: "smooth" },
+        { timeSec: duration, position: end, interpolation: "smooth" },
+      ];
+      project.timeline!.tracks.push(createTrajectoryTrack({
+        object,
+        durationSec: duration,
+        preset: "custom",
+        waypoints,
+        motion: animation.characterMotion,
+        orientToPath: true,
+        source: "preset",
+        color: object.color,
+      }));
+    });
+  }
+
+  /** 收口：生成演示时间轴并返回可编辑工程（每次都是全新对象，模板常量不被修改） */
+  function finalize(): DirectorProject {
+    project.timeline = {
+      ...createDefaultDirectorTimeline(),
+      durationSec: animation.durationSec,
+      tracks: [],
+    };
+    if (animation.camera !== "none") buildCameraTrack();
+    buildCharacterTracks();
+    return project;
+  }
+
+  return { project, addLibraryObject, addPrimitive, addCharacter, addCamera, finalize };
 }
 
 function buildBedroom(): DirectorProject {
-  const { project, addLibraryObject, addCharacter, addCamera } = createProjectBuilder({
-    backgroundColor: "#191b20",
-    groundOpacity: 0.25,
-  });
+  const { addLibraryObject, addCharacter, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#191b20", groundOpacity: 0.25 },
+    { durationSec: 10, camera: "orbit", characterMotion: "walk", characterCount: 2 },
+  );
 
   addLibraryObject({
     categoryId: "director-desk",
@@ -269,14 +434,14 @@ function buildBedroom(): DirectorProject {
 
   addCamera({ name: "A · 全景机位", view: [6.4, 3.4, 6.8], target: [0, 1.1, 0], fov: 38 });
   addCamera({ name: "B · 床边近景", view: [2.8, 1.7, 2.6], target: [-1.4, 1.2, -1.6], fov: 45 });
-  return project;
+  return finalize();
 }
 
 function buildRoom(): DirectorProject {
-  const { project, addLibraryObject, addCamera } = createProjectBuilder({
-    backgroundColor: "#1d2026",
-    groundOpacity: 0.2,
-  });
+  const { addLibraryObject, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#1d2026", groundOpacity: 0.2 },
+    { durationSec: 8, camera: "push-in" },
+  );
 
   // 8 × 6 米房间：后墙 + 两侧墙，墙素材真实长度 4m，这里拉长到 8m
   addLibraryObject({
@@ -330,14 +495,14 @@ function buildRoom(): DirectorProject {
   });
 
   addCamera({ name: "A · 房间全景", view: [3.2, 1.75, 2.8], target: [0, 1.2, 0], fov: 50 });
-  return project;
+  return finalize();
 }
 
 function buildPark(): DirectorProject {
-  const { project, addLibraryObject, addCharacter, addCamera } = createProjectBuilder({
-    backgroundColor: "#101820",
-    groundOpacity: 0.55,
-  });
+  const { addLibraryObject, addCharacter, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#101820", groundOpacity: 0.55 },
+    { durationSec: 10, camera: "orbit", characterMotion: "walk", characterCount: 2 },
+  );
 
   const trees: Array<[Vec3, number, string]> = [
     [[-7, 0, -5], 1, "plant-broadleaf.glb"],
@@ -400,14 +565,14 @@ function buildPark(): DirectorProject {
   addCharacter({ name: "角色 B", position: [0.8, 0, 0.4], rotationY: Math.PI, pose: "stand" });
 
   addCamera({ name: "A · 林间全景", view: [7, 3.2, 8], target: [0, 1, 0], fov: 36 });
-  return project;
+  return finalize();
 }
 
 function buildStreet(): DirectorProject {
-  const { project, addLibraryObject, addCharacter, addCamera } = createProjectBuilder({
-    backgroundColor: "#121826",
-    groundOpacity: 0.45,
-  });
+  const { addLibraryObject, addCharacter, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#121826", groundOpacity: 0.45 },
+    { durationSec: 10, camera: "push-in", characterMotion: "walk", characterCount: 2, characterAxis: "z" },
+  );
 
   // 道路：直路素材真实长度 10m，沿中轴铺两段
   addLibraryObject({
@@ -490,14 +655,14 @@ function buildStreet(): DirectorProject {
 
   addCamera({ name: "A · 街口机位", view: [0, 1.75, 11], target: [0, 1.3, -3], fov: 40 });
   addCamera({ name: "B · 人行道机位", view: [3.4, 1.7, 4.4], target: [-0.6, 1.2, -1.2], fov: 45 });
-  return project;
+  return finalize();
 }
 
 function buildCourtyard(): DirectorProject {
-  const { project, addLibraryObject, addCharacter, addCamera } = createProjectBuilder({
-    backgroundColor: "#171b1d",
-    groundOpacity: 0.5,
-  });
+  const { addLibraryObject, addCharacter, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#171b1d", groundOpacity: 0.5 },
+    { durationSec: 10, camera: "orbit", characterMotion: "walk", characterCount: 2 },
+  );
 
   addLibraryObject({
     categoryId: "director-desk",
@@ -571,14 +736,14 @@ function buildCourtyard(): DirectorProject {
   addCharacter({ name: "角色 B", position: [1.2, 0, 1.8], rotationY: Math.PI, pose: "stand" });
 
   addCamera({ name: "A · 庭院全景", view: [0, 2.1, 8], target: [0, 1.2, -2], fov: 40 });
-  return project;
+  return finalize();
 }
 
 function buildLightStage(): DirectorProject {
-  const { project, addLibraryObject, addPrimitive, addCharacter, addCamera } = createProjectBuilder({
-    backgroundColor: "#151d2b",
-    groundOpacity: 0.3,
-  });
+  const { addLibraryObject, addPrimitive, addCharacter, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#151d2b", groundOpacity: 0.3 },
+    { durationSec: 8, camera: "orbit", characterMotion: "walk", characterCount: 1 },
+  );
 
   addPrimitive({
     name: "圆形台座",
@@ -623,14 +788,14 @@ function buildLightStage(): DirectorProject {
 
   addCamera({ name: "A · 环绕机位", view: [3.5, 2.4, 6.2], target: [0, 1.1, 0], fov: 32 });
   addCamera({ name: "B · 正面机位", view: [0, 1.7, 6.4], target: [0, 1.35, 0], fov: 35 });
-  return project;
+  return finalize();
 }
 
 function buildDollyHall(): DirectorProject {
-  const { project, addLibraryObject, addCharacter, addCamera } = createProjectBuilder({
-    backgroundColor: "#0f1218",
-    groundOpacity: 0.25,
-  });
+  const { addLibraryObject, addCharacter, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#0f1218", groundOpacity: 0.25 },
+    { durationSec: 8, camera: "push-in", characterMotion: "walk", characterCount: 1, characterAxis: "z" },
+  );
 
   // 长廊：两侧墙体 + 立柱形成纵深
   addLibraryObject({
@@ -678,14 +843,14 @@ function buildDollyHall(): DirectorProject {
 
   addCharacter({ name: "角色 A · 长廊", position: [0, 0, -1.4], rotationY: Math.PI, pose: "walk" });
   addCamera({ name: "A · 纵深机位", view: [0, 1.6, 4.6], target: [0, 1.25, -2.4], fov: 38 });
-  return project;
+  return finalize();
 }
 
 function buildNeonChase(): DirectorProject {
-  const { project, addLibraryObject, addCharacter, addCamera } = createProjectBuilder({
-    backgroundColor: "#0b1020",
-    groundOpacity: 0.4,
-  });
+  const { addLibraryObject, addCharacter, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#0b1020", groundOpacity: 0.4 },
+    { durationSec: 6, camera: "push-in", characterMotion: "run", characterCount: 2, characterAxis: "z" },
+  );
 
   addLibraryObject({
     categoryId: "director-desk",
@@ -748,14 +913,14 @@ function buildNeonChase(): DirectorProject {
   addCharacter({ name: "角色 B · 追逐", position: [0.9, 0, -0.6], rotationY: Math.PI, pose: "run" });
 
   addCamera({ name: "A · 低机位追逐", view: [0.6, 0.9, 6.4], target: [0, 1.2, -2], fov: 52 });
-  return project;
+  return finalize();
 }
 
 function buildAbstractStage(): DirectorProject {
-  const { project, addPrimitive, addCamera } = createProjectBuilder({
-    backgroundColor: "#08090d",
-    showGround: false,
-  });
+  const { addPrimitive, addCamera, finalize } = createProjectBuilder(
+    { backgroundColor: "#08090d", showGround: false },
+    { durationSec: 8, camera: "orbit" },
+  );
 
   addPrimitive({
     name: "主环体",
@@ -797,13 +962,13 @@ function buildAbstractStage(): DirectorProject {
   });
 
   addCamera({ name: "A · 抽象全景", view: [6.2, 3.6, 8.2], target: [0, 1.5, 0], fov: 40 });
-  return project;
+  return finalize();
 }
 
 function buildBlank(): DirectorProject {
-  const { project, addCamera } = createProjectBuilder();
+  const { addCamera, finalize } = createProjectBuilder();
   addCamera({ name: "A · 主机位", view: [5, 3, 7], target: [0, 1, 0], fov: 40 });
-  return project;
+  return finalize();
 }
 
 /**

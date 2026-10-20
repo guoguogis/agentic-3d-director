@@ -25,6 +25,7 @@ const CATEGORY_ICONS = {
 
 export function DirectorTemplatePanel({ onClose }: { onClose: () => void }) {
   const replaceProject = useDirectorStore((state) => state.replaceProject);
+  const setTimelinePanelOpen = useDirectorStore((state) => state.setTimelinePanelOpen);
   const [category, setCategory] = useState<DirectorTemplateCategory | "全部">("全部");
   const [selectedId, setSelectedId] = useState(DIRECTOR_TEMPLATES[0]?.id ?? "");
 
@@ -41,7 +42,13 @@ export function DirectorTemplatePanel({ onClose }: { onClose: () => void }) {
 
   function applyTemplate() {
     if (!selected) return;
-    replaceProject(selected.build());
+    // build() 每次都返回全新的工程与轨道：模板本身只读，改动场景不会污染预置
+    const project = selected.build();
+    replaceProject(project);
+    // 模板自带演示动画，直接打开时间轴即可播放 / 导出视频
+    if ((project.timeline?.tracks.length ?? 0) > 0) {
+      setTimelinePanelOpen(true);
+    }
     onClose();
   }
 

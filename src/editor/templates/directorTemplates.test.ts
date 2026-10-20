@@ -84,6 +84,60 @@ describe("director templates", () => {
     expect(courtyard.objects.filter((object) => object.kind === "character")).toHaveLength(2);
   });
 
+  it("ships a playable animation timeline with every template", () => {
+    DIRECTOR_TEMPLATES.forEach((template) => {
+      const project = template.build();
+      const timeline = project.timeline;
+      expect(timeline).toBeTruthy();
+      expect(timeline!.durationSec).toBeGreaterThan(0);
+      expect(timeline!.tracks.length).toBeGreaterThan(0);
+
+      const cameraObjectIds = new Set(
+        project.objects.filter((object) => object.kind === "camera").map((object) => object.id)
+      );
+      expect(timeline!.tracks.some((track) => cameraObjectIds.has(track.objectId))).toBe(true);
+
+      timeline!.tracks.forEach((track) => {
+        expect(project.objects.some((object) => object.id === track.objectId)).toBe(true);
+        expect(track.keyframes.length).toBeGreaterThanOrEqual(2);
+        expect(Math.max(...track.keyframes.map((frame) => frame.timeSec))).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  it("adds walk / run tracks for template characters", () => {
+    const bedroom = getDirectorTemplate("bedroom")!.build();
+    const bedroomCharacterIds = new Set(
+      bedroom.objects.filter((object) => object.kind === "character").map((object) => object.id)
+    );
+    const bedroomCharacterTracks = bedroom.timeline!.tracks.filter((track) =>
+      bedroomCharacterIds.has(track.objectId)
+    );
+    expect(bedroomCharacterTracks.length).toBeGreaterThanOrEqual(2);
+    expect(bedroomCharacterTracks.every((track) => track.motion === "walk")).toBe(true);
+
+    const chase = getDirectorTemplate("neon-chase")!.build();
+    const chaseCharacterIds = new Set(
+      chase.objects.filter((object) => object.kind === "character").map((object) => object.id)
+    );
+    expect(
+      chase.timeline!.tracks.some((track) => chaseCharacterIds.has(track.objectId) && track.motion === "run")
+    ).toBe(true);
+  });
+
+  it("keeps preset templates immutable across builds", () => {
+    const first = getDirectorTemplate("bedroom")!.build();
+    first.objects[0].name = "被改过的对象";
+    first.timeline!.tracks[0].keyframes[0].transform.position[0] = 99;
+    first.timeline!.tracks.length = 0;
+
+    const second = getDirectorTemplate("bedroom")!.build();
+    expect(second.objects).not.toBe(first.objects);
+    expect(second.objects[0].name).not.toBe("被改过的对象");
+    expect(second.timeline!.tracks.length).toBeGreaterThan(0);
+    expect(second.timeline!.tracks[0].keyframes[0].transform.position[0]).not.toBe(99);
+  });
+
   it("uses primitives for the feature and abstract stages", () => {
     const lightStage = getDirectorTemplate("light-stage")!.build();
     expect(lightStage.objects.some((object) => object.geometryType === "cylinder")).toBe(true);

@@ -204,6 +204,19 @@ textarea:focus-visible {
   background: rgb(var(--accent-rgb) / 0.16);
 }
 
+/* 右上角「从模板导入」：与导演助手同尺寸，但用中性色区分主次 */
+.top-bar-template-button {
+  border-color: rgb(var(--border-rgb) / 0.48);
+  color: rgb(var(--text-rgb));
+  background: rgb(var(--surface-rgb) / 0.55);
+}
+.top-bar-template-button:hover,
+.top-bar-template-button.is-active {
+  border-color: rgb(var(--border-rgb) / 0.78);
+  color: rgb(var(--text-rgb));
+  background: rgb(var(--surface-rgb) / 0.85);
+}
+
 .director-agent-drawer {
   position: fixed;
   z-index: 80;

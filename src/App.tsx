@@ -1,6 +1,6 @@
 import "./styles/index.css";
 import { useEffect, useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { LayoutTemplate, Sparkles, X } from "lucide-react";
 import { DirectorDeskShell } from "./app/layout/DirectorDeskShell";
 import { DirectorAgentDrawer, type DirectorAgentPanelOffset } from "./editor/agent/DirectorAgentDrawer";
 import {
@@ -11,6 +11,7 @@ import { DirectorCanvas } from "./editor/canvas/DirectorCanvas";
 import { clearDirectorDeskHostBridge, initDirectorDeskHostBridge } from "./editor/io/hostBridge";
 import { useDirectorStore } from "./editor/store/directorStore";
 import { AnimationTimelinePanel } from "./editor/timeline/AnimationTimelinePanel";
+import { DirectorTemplatePanel } from "./editor/templates/DirectorTemplatePanel";
 
 function isEditableShortcutTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -23,6 +24,7 @@ export default function App() {
   const setViewMode = useDirectorStore((state) => state.setViewMode);
   const timelinePanelOpen = useDirectorStore((state) => state.timelinePanelOpen);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [templatePanelOpen, setTemplatePanelOpen] = useState(false);
   const [agentPanelOffset, setAgentPanelOffset] = useState<DirectorAgentPanelOffset>({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -99,6 +101,16 @@ export default function App() {
         </div>
         <div className="top-bar-actions">
           <button
+            className={`top-bar-agent-button top-bar-template-button${templatePanelOpen ? " is-active" : ""}`}
+            type="button"
+            aria-label="从模板导入"
+            aria-expanded={templatePanelOpen}
+            onClick={() => setTemplatePanelOpen((open) => !open)}
+          >
+            <LayoutTemplate aria-hidden="true" size={15} />
+            <span>从模板导入</span>
+          </button>
+          <button
             className={`top-bar-agent-button${agentOpen ? " is-active" : ""}`}
             type="button"
             aria-label="导演助手"
@@ -123,6 +135,9 @@ export default function App() {
         <DirectorCanvas />
       </DirectorDeskShell>
       <AnimationTimelinePanel />
+      {templatePanelOpen ? (
+        <DirectorTemplatePanel onClose={() => setTemplatePanelOpen(false)} />
+      ) : null}
       {agentOpen && (
         <DirectorAgentDrawer
           onClose={() => setAgentOpen(false)}

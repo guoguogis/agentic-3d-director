@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { createInitialDirectorState, useDirectorStore } from "./editor/store/directorStore";
@@ -25,6 +25,39 @@ it("renders the director desk header and view mode switch", () => {
   expect(container.querySelector(".top-bar-center .mode-toggle")).toBeInTheDocument();
   expect(screen.queryByLabelText("帮助")).not.toBeInTheDocument();
   expect(screen.getByLabelText("关闭")).toBeInTheDocument();
+});
+
+it("puts the template entry before the director assistant in the top-right", () => {
+  const { container } = render(<App />);
+  const actions = container.querySelector(".top-bar-actions");
+  expect(actions).toBeTruthy();
+
+  const labels = Array.from(actions!.querySelectorAll("button")).map((button) =>
+    button.getAttribute("aria-label")
+  );
+  expect(labels.slice(0, 2)).toEqual(["从模板导入", "导演助手"]);
+});
+
+it("applies a template with a ready-to-play animation timeline", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.click(screen.getByRole("button", { name: "从模板导入" }));
+  const dialog = screen.getByRole("dialog", { name: "场景模板" });
+  expect(within(dialog).getByText("卧室 · 四人调度")).toBeInTheDocument();
+
+  await user.click(within(dialog).getByRole("button", { name: "选择模板 卧室 · 四人调度" }));
+  await user.click(within(dialog).getByRole("button", { name: "套用模板" }));
+
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog", { name: "场景模板" })).not.toBeInTheDocument();
+  });
+
+  const state = useDirectorStore.getState();
+  expect(state.project.objects.filter((object) => object.kind === "character")).toHaveLength(4);
+  expect(state.project.timeline?.tracks.length).toBeGreaterThan(0);
+  // 套用后直接打开时间轴，可以播放 / 导出
+  expect(state.timelinePanelOpen).toBe(true);
 });
 
 it("notifies the host canvas when the director desk app is ready", () => {
